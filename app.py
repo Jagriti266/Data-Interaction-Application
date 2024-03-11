@@ -1,125 +1,88 @@
-import spacy
 import sqlite3
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-import nltk
-nltk.download('stopwords')
-nltk.download('punkt')
-nltk.download('wordnet')
-
-
+import spacy
 
 nlp = spacy.load("en_core_web_sm")
 
-
-lemmatizer = WordNetLemmatizer()
-stop_words = set(stopwords.words('english'))
-
-
-conn = sqlite3.connect(':memory:')  # Create an in-memory database for this example
+# Connect to an in-memory database
+conn = sqlite3.connect(':memory:')
 cursor = conn.cursor()
+# Create the products and orders tables (if they don't exist)
+cursor.execute('''CREATE TABLE IF NOT EXISTS products (
+  product_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT,
+  category TEXT,
+  price REAL NOT NULL
+);''')
+
+cursor.execute('''CREATE TABLE IF NOT EXISTS orders (
+  order_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_name TEXT NOT NULL,
+  status TEXT NOT NULL
+);''')
 
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY,
-        name TEXT,
-        category TEXT,
-        price REAL
-    )
-''')
+def query_app(user_input):
+  """
+  Queries the in-memory SQL database based on user intent derived from NLP analysis.
 
-cursor.execute('''
-    INSERT INTO products (name, category, price) VALUES
-    ('Product A', 'Category 1', 10),
-    ('Product B', 'Category 2', 20),
-    ('Product C', 'Category 1', 15)
-''')
-conn.commit()
+  Args:
+      user_input (str): Textual input from the user.
 
-def process_query(query):
-    tokens = word_tokenize(query.lower())
-    tokens = [lemmatizer.lemmatize(token) for token in tokens if token.isalnum() and token not in stop_words]
-    return tokens
+  Returns:
+      str: Information retrieved from the database based on user intent.
+  """
+  doc = nlp(user_input)
 
-def search_products_by_name(query_tokens):
-    cursor.execute('SELECT * FROM products')
+  # Sample data 
+  cursor.execute("INSERT INTO products (name, description, category, price) VALUES (?, ?, ?, ?)", ("T-Shirt", "Comfortable cotton T-Shirt", "Clothing", 19.99))
+  cursor.execute("INSERT INTO products (name, description, category, price) VALUES (?, ?, ?, ?)", ("Laptop", "High-performance laptop for work and play", "Electronics", 799.99))
+  cursor.execute("INSERT INTO products (name, description, category, price) VALUES (?, ?, ?, ?)", ("Headphones", "Noise-cancelling headphones for immersive sound", "Electronics", 99.99))
+  cursor.execute("INSERT INTO orders (customer_name, status) VALUES (?, ?)", ("John Doe", "Shipped"))
+  cursor.execute("INSERT INTO orders (customer_name, status) VALUES (?, ?)", ("Jane Smith", "Processing"))
+  conn.commit()  # Commit the data insertion
+
+  # Check for information requests
+  if any(token.text.lower() in ["list", "show", "browse"] for token in doc):
+    cursor.execute("SELECT name, category FROM products")
     products = cursor.fetchall()
-    results = []
-    for product in products:
-        if any(token in product[1].lower() for token in query_tokens):  # product[1] is the name
-            results.append(product)
-    return results
+    product_list = "\n".join([f"{name} ({category})" for name, category in products])
+    return f"Available products:\n{product_list}"
 
-def search_products_by_category(category):
-    cursor.execute('SELECT * FROM products WHERE category=?', (category,))
-    return cursor.fetchall()
+  # Check for order status inquiries
+  elif any(token.text.lower() in ["order", "status"] for token in doc):
+    # Find order ID mentioned in the sentence 
+    order_id = None
+    for entity in doc.ents:
+      if entity.label_ == "ORDINAL":
+        order_id = int(entity.text)
+    # Search for order details using order ID
+    if order_id:
+      cursor.execute("SELECT status FROM orders WHERE order_id = ?", (order_id,))
+      status = cursor.fetchone()
+      if status:
+        return f"Order Status: {status[0]}"
+      else:
+        return f"Order ID {order_id} not found."
+    else:
+      return "Please provide your order ID to check the status."
 
-def search_products_by_price_range(min_price, max_price):
-    cursor.execute('SELECT * FROM products WHERE price BETWEEN ? AND ?', (min_price, max_price))
-    return cursor.fetchall()
+  # Check for service inquiries 
+  elif any(token.text.lower() in ["return", "warranty", "shipping"] for token in doc):
+    service = user_input.lower().split()[1]
+    return f"For information about our {service} policy, please visit our Help Center."
+  # No matching intent
+  else:
+    return "Sorry, I couldn't understand your request."
 
-def extract_entities(query):
-    doc = nlp(query)
-    entities = []
-    for ent in doc.ents:
-        entities.append((ent.text, ent.label_))
-    return entities
-
-def handle_query(query):
-    # Process the query to extract relevant tokens
-    query_tokens = process_query(query)
-
-    # Check for specific keywords in the query to determine intent
-    if 'find' in query_tokens and 'product' in query_tokens:
-        # Intent: Search for a product by name
-        product_name_index = query_tokens.index('product') + 1
-        product_name = query_tokens[product_name_index]
-        return search_products_by_name([product_name])
-
-    if 'show' in query_tokens and 'products' in query_tokens and 'category' in query_tokens:
-        # Intent: Search for products in a specific category
-        category_index = query_tokens.index('category') + 1
-        category = query_tokens[category_index]
-        return search_products_by_category(category)
-
-    if 'find' in query_tokens and 'products' in query_tokens and 'between' in query_tokens:
-        # Intent: Search for products within a price range
-        between_index = query_tokens.index('between')
-        min_price_index = between_index + 1
-        max_price_index = query_tokens.index('and', between_index + 1)
-        min_price = float(query_tokens[min_price_index])
-        max_price = float(query_tokens[max_price_index])
-        return search_products_by_price_range(min_price, max_price)
-
-    # Default intent: Search for products by name
-    return search_products_by_name(query_tokens)
+while True:
+  user_input = input("Enter your request (or 'quit' to exit): ")
+  if user_input.lower() == "quit":
+    break
+  response = query_app(user_input)
+  print(response)
 
 
 
-
-
-def main():
-    print("Welcome to the Data Interaction Application!")
-
-    while True:
-        user_input = input("Please enter your query (type 'exit' to quit): ")
-        if user_input.lower() == 'exit':
-            print("Exiting the application.")
-            break
-
-        try:
-            # Handle the user query
-            results = handle_query(user_input)
-            if results:
-                print("Found matching products:")
-                for result in results:
-                    print(f"Product: {result[1]}, Category: {result[2]}, Price: ${result[3]}")
-            else:
-                print("No matching products found.")
-        except Exception as e:
-            print("An error occurred:", e)
-
-if __name__ == "__main__":
-    main()
+print("Exiting...")
+   
