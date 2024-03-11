@@ -1,42 +1,71 @@
 # Data-Interaction-Application
 This Python application simulates interaction with a database, processes user queries, and returns relevant data. It demonstrates understanding of natural language processing (NLP), database manipulation, and user input handling.
-## Setup and Running
 
-### Prerequisites
-- Python 3.x installed on your system
-- Installation of required Python packages:
-  ```bash
-  pip install spacy nltk
+### 1. Setting Up and Running the Application
 
-### Setup
-Clone this repository to your local machine:
+Prerequisites:
 
-Navigate to the project directory: cd data-interaction-application
+Python (version 3.x recommended)
 
-Download the necessary NLTK resources: python -m nltk.downloader stopwords punkt wordnet
+spaCy library (en_core_web_sm language model)
 
-Run the application: python main.py
+Google Colab (or a similar environment that supports Python coding)
 
-### Usage 
-Upon running the application, you will be prompted to enter a query.
 
-Type your query and press Enter.
+### Install Libraries:
 
-The application will process the query and provide relevant data based on the input.
+Open a terminal or command prompt and ensure you have Python installed (check by running python --version).
 
-### Intent Recognition Logic
-The application recognizes different types of user intents, such as searching for a product by name, searching for products in a specific category, or searching for products within a price range.
+Install the required libraries using pip:  pip install spacy sqlite3
 
-It analyzes the query text to identify keywords and entities using spaCy.
+Download the spaCy language model (en_core_web_sm) used in the code: python -m spacy download en_core_web_sm
 
-Based on the identified entities and keywords, the application determines the user's intent and executes the appropriate database query.
 
-### Query Processing
-The application processes user queries by extracting relevant tokens, such as product names, categories, or price ranges.
-It then performs the corresponding database query to retrieve relevant information based on the user's intent.
+Copy the provided Python code  into a new Python file (e.g.,app.py).
 
-### Application Behavior
-The application interprets user input using natural language processing techniques. It analyzes the query to identify the user's intent and then executes the corresponding action to retrieve relevant data from the database.
+Run the Application in Colab: Open Google Colab and upload the app.py file to your notebook.
 
-### External Libraries or Tools Used
-spaCy, NLTK (Natural Language Toolkit), SQLite
+In a code cell, use the following command to run the application:
+Python
+!python app.py
+
+### Interact with the Assistant:
+
+The application will prompt you to enter your request.
+Type your queries related to product information (e.g., "list available products") or order status (e.g., "check order status for order 123").
+
+The application will use NLP to understand your intent and retrieve information from the in-memory database.
+
+
+### 2. User Input Interpretation and Data Retrieval
+
+The application utilizes the following functionalities:
+
+### Natural Language Processing (NLP):
+
+spaCy library is used for NLP tasks.
+
+User input is analyzed to identify keywords and sentence structure.
+
+The application attempts to understand the user's intent (e.g., requesting product information, checking order status, or inquiring about service policies).
+
+### In-Memory Database:
+
+The code utilizes an in-memory SQLite database to store product and (optional) order data.
+
+Based on the interpreted user intent, the application executes relevant SQL queries to retrieve data from the database.
+For example, if the user asks for a product list, the application queries the products table to retrieve product names and categories.
+
+### Response Generation:
+
+Depending on the retrieved data and the user's intent, the application generates a response that fulfills the user's request.
+
+This might involve displaying product details, order statuses, or informative messages about service policies.
+
+### 3. External Libraries and Tools
+
+spaCy (https://spacy.io/): An open-source library for NLP tasks in Python.
+
+SQLite (https://www.sqlite.org/): A lightweight relational database management system used for the in-memory database in this application (accessed through the sqlite3 Python library).
+
+Google Colab :(https://colab.research.google.com/)
